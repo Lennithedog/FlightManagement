@@ -20,7 +20,14 @@ def create_database(conn):
             "FOREIGN KEY(FlightId) REFERENCES Flight(FlightId), " +
             "FOREIGN KEY(PilotId) REFERENCES Pilot(PilotId))")
     conn.execute("CREATE TABLE 'Status' (StatusId INTEGER PRIMARY KEY UNIQUE, StatusText VARCHAR(255))")
-    
+
+def create_views(conn):
+    conn.execute("CREATE VIEW IF NOT EXISTS v_pilot_schedule AS "
+    "SELECT p.FirstName, p.LastName, a.City as Departure, DepartureDatetime as Departing FROM Pilot p "
+    "INNER JOIN PilotSchedule s on p.PilotId=s.PilotId "
+    "LEFT JOIN Flight f on s.FlightId=f.FlightId "
+    "LEFT JOIN Airport a on a.AirportId=f.DepartureAirportId")
+
 def create_data(conn):
     conn.execute("INSERT INTO Airport VALUES (1, 'LHR', 'London', 'United Kingdom')")
     conn.execute("INSERT INTO Airport VALUES (2, 'YHZ', 'Halifax', 'Canada')")
@@ -36,7 +43,13 @@ def create_data(conn):
     conn.execute("INSERT INTO Flight VALUES (1, 2, 1, '2025-03-24 09:00:00 UTC', 2, '2025-03-23 15:00:00 UTC', 4)")
     conn.execute("INSERT INTO Flight VALUES (2, 9, 2, '2025-03-24 10:00:00 UTC', 10, '2025-03-24 14:00:00 UTC', 1)")
     conn.execute("INSERT INTO Flight VALUES (3, 3, 3, '2025-03-24 17:00:00 UTC', 1, '2025-03-24 19:00:00 UTC', 2)")
-    conn.execute("INSERT INTO Flight VALUES (4, 6, 1, '2025-03-25 14:00:00 UTC', 8, '2025-03-25 22:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (4, 5, 4, '2025-03-24 18:00:00 UTC', 6, '2025-03-25 19:00:00 UTC', 2)")
+    conn.execute("INSERT INTO Flight VALUES (5, 6, 1, '2025-03-25 14:00:00 UTC', 8, '2025-03-25 22:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (6, 2, 1, '2025-03-25 09:00:00 UTC', 2, '2025-03-25 15:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (7, 2, 1, '2025-03-26 09:00:00 UTC', 2, '2025-03-26 15:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (8, 2, 1, '2025-03-27 09:00:00 UTC', 2, '2025-03-27 15:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (9, 2, 1, '2025-03-28 09:00:00 UTC', 2, '2025-03-28 15:00:00 UTC', 6)")
+    conn.execute("INSERT INTO Flight VALUES (10, 2, 1, '2025-03-29 09:00:00 UTC', 2, '2025-03-29 15:00:00 UTC', 6)")
 
     conn.execute("INSERT INTO Status (StatusText) VALUES ('Gate Closed')")
     conn.execute("INSERT INTO Status (StatusText) VALUES ('Gate Open')")
@@ -45,6 +58,7 @@ def create_data(conn):
     conn.execute("INSERT INTO Status (StatusText) VALUES ('Cancelled')")
     conn.execute("INSERT INTO Status (StatusText) VALUES ('On Time')")
     
+    """use a cursor to insert csv data row by row"""
     cursor = conn.cursor()
 
     file = open('data/Aircraft.csv')

@@ -1,13 +1,19 @@
-import os
 import sqlite3
 import pandas as pd
 import installdb as db
 
+"""Debug flag to output actual SQL query"""
+DEBUG = 0
+
 def print_data(sql, conn):
+    """Helper function for reading from sqlite and printing to screen"""
+    if DEBUG:
+        print(sql)
     data = pd.read_sql_query(sql, conn)
     print(data)
 
 def view_flights(conn):
+    """ main view of flight schedule connecting all the relevant tables """
     print("View Flight By:")
     print("[1] Destination")
     print("[2] Status")
@@ -25,13 +31,13 @@ def view_flights(conn):
     match criteria:
         case '1':
             airport_code = input("Airport Code: ")
-            query + " WHERE dp.City=" + airport_code
+            query += " WHERE dp.City='" + airport_code + "'"
         case '2':
             status = input("Status: ")
-            query + " WHERE f.StatusText" + status
+            query += " WHERE s.StatusText LIKE '" + status + "'"
         case '3':
             departure_date = input("Departure Date: ")
-            query + " WHERE dp.DepartureDateime LIKE " + departure_date + "*"
+            query += " WHERE dp.DepartureDatetime LIKE '" + departure_date + "*'"
         case '4':
             query
         case '0':
@@ -46,12 +52,30 @@ def view_destinations(conn):
     print_data("SELECT * FROM Airport", conn)
 
 def view_pilot_schedule(conn):
-    print_data("SELECT p.FirstName, p.LastName as Name, a.City as Departure, DepartureDatetime as Departing FROM Pilot p "
-                "INNER JOIN PilotSchedule s on p.PilotId=s.PilotId "
-                "LEFT JOIN Flight f on s.FlightId=f.FlightId "
-                "LEFT JOIN Airport a on a.AirportId=f.DepartureAirportId", conn)
+    print_data("SELECT * from v_pilot_schedule", conn)
+
+def view_reports(conn):
+    """view flight information aggregated by a criteria"""
+    print("[1] Number of flights by destination")
+    print("[2] Number of flights by pilot")
+    print("[0] Return to main menu")
+    criteria = input(": ");
+    query = "SELECT Departure,COUNT(*) as [Number of Flights] FROM (SELECT * FROM v_pilot_schedule)"
+    match criteria:
+        case '1':
+            query = query + " GROUP BY Departure"
+        case '2':
+            query = query + " GROUP BY PilotId"
+        case '0':
+            return
+        case _:
+            print("Invalid option")
+            view_reports(conn)
+
+    print_data(query, conn)
 
 def update_destination(conn):
+    """update destination information and commit to database if successful, else rollback the transaction"""
     airport_code = input("Airport Code: ")
     city = input("City: ");
     country = input("Country: ");
@@ -62,10 +86,11 @@ def update_destination(conn):
         print("Unable to update destination")
         print(e)
         conn.rollback()
-        
+
     view_destinations(conn)
 
 def update_pilot_schedule(conn):
+    """update pilot schedule and commit to database if successful, else rollback the transaction"""
     flight_id = input("Flight Id: ")
     pilot_id = input("Pilot Id: ")
     
@@ -73,13 +98,25 @@ def update_pilot_schedule(conn):
         cursor = conn.cursor()
         cursor.execute("INSERT INTO PilotSchedule VALUES (?,?)", (flight_id, pilot_id))
     except Exception as e:
-        print("Unable to assign pilot")
+        print("Unable to assign pilot ")
         print(e)
-        conn.rollback()
-        
+        conn.rollback()       
     view_pilot_schedule(conn)
 
+def delete_destination(conn):
+    """delete destination"""
+    airport_id = input("AirportId: ")
+    data = pd.read_sql_query("SELECT * FROM Airport WHERE AirportId=" + airport_id, conn)
+    if(len(data.index) > 0):
+           cursor = conn.cursor()
+           cursor.execute("DELETE FROM Airport WHERE AirportId=?", airport_id)
+           view_destinations(conn)
+    else:
+        print("Invalid AirportId")
+        return
+
 def update_flight(conn):
+    """update flight information and commit to database if successful, else rollback the transaction"""
     print("Update flight:")
     print("[1] Departure Datetime")
     print("[2] Status")
@@ -100,21 +137,21 @@ def update_flight(conn):
             return
         case _:
             print("Invalid option")
-    
-    view_flights(conn)
 
     try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE Flight SET "+column+"=? WHERE FlightId=?", (value, flight_id))
+        query = "UPDATE Flight SET " + column + "=" + value + " WHERE FlightId=" + flight_id
+        if DEBUG:
+            print(query)
+        conn.execute(query)
     except Exception as e:
-        print("Unable to update flight")
+        print("Unable to update flight ")
         print(e)
         conn.rollback()
         
     view_flights(conn)
 
 def add_flight(conn):
-    # TODO: make this more user-friendly by allowing inputs other than fk id
+    """add flight and commit to database if successful, else rollback the transaction"""
     aircraft_id = input("AircraftId: ")
     departure_id = input("DepartureId: ")
     departure_datetime = input("Departure Datetime: ")
@@ -130,6 +167,7 @@ def add_flight(conn):
         conn.rollback()
 
 def print_menu():
+    """helper function print main menu"""
     print("\n")
     print("[1] Add a New Flight")
     print("[2] View Flights by Criteria")
@@ -138,16 +176,23 @@ def print_menu():
     print("[5] View Pilot Schedule")
     print("[6] View Destination Information")
     print("[7] Update Destination Information")
+    print("[8] Delete Destination Information")
+    print("[9] Reports")
     print("[0] Exit")
 
 def main():
+    """connect to the database and call installdb.py libraries to create database schema and populate data"""
+    """in production this would only be called once at installation"""
     conn = sqlite3.connect('FlightManagement')
     db.create_database(conn)
     db.create_data(conn)
+    db.create_views(conn)
     
     selection = '-1'
-    #TODO: change to case
-    while selection != '0':        
+    while selection != '0':
+        """entry point for the application, print main menu and """
+        """then called function based on user selection"""
+        """return to the main menu until the user exits"""
         print_menu()
         selection = input(": ")
         match selection:
@@ -165,11 +210,15 @@ def main():
                 view_destinations(conn)
             case '7':
                 update_destination(conn)
+            case '8':
+                delete_destination(conn)
+            case '9':
+                view_reports(conn)
             case '0':
                 return
             case _:
                 print("Invalid option")
-
+    """close connection to the database upon exit"""
     conn.close()
 
 if __name__ == "__main__":
