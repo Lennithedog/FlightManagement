@@ -15,11 +15,9 @@ def print_data(sql, conn):
 def view_flights(conn):
     """ main view of flight schedule connecting all the relevant tables """
     print("View Flight By:")
-    print("[1] Destination")
-    print("[2] Status")
-    print("[3] Departure Date")
-    print("[4] All")
-    print("[0] Return to main menu")
+    items = ("Destination", "Status", "Departure Date", "All")
+    print_menu(items)
+
     query = "SELECT f.FlightId,a.AircraftMakeModel,dep.City as Departure,f.DepartureDatetime as Departing,arr.City as Arrival,s.StatusText as Status " \
             "FROM Flight f " \
             "LEFT JOIN Aircraft a ON f.AircraftId=a.AircraftId " \
@@ -56,11 +54,13 @@ def view_pilot_schedule(conn):
 
 def view_reports(conn):
     """view flight information aggregated by a criteria"""
-    print("[1] Number of flights by destination")
-    print("[2] Number of flights by pilot")
-    print("[0] Return to main menu")
+    
+    items = ("Number of flights by destination", "Number of flights by pilot")
+    print_menu(items)
+    
     criteria = input(": ");
-    query = "SELECT Departure,COUNT(*) as [Number of Flights] FROM (SELECT * FROM v_pilot_schedule)"
+    query = "SELECT Departure,PilotId,COUNT(*) as [Number of Flights] FROM (SELECT * FROM v_pilot_schedule)"
+
     match criteria:
         case '1':
             query = query + " GROUP BY Departure"
@@ -118,9 +118,8 @@ def delete_destination(conn):
 def update_flight(conn):
     """update flight information and commit to database if successful, else rollback the transaction"""
     print("Update flight:")
-    print("[1] Departure Datetime")
-    print("[2] Status")
-    print("[0] Return to main menu")
+    items = ("Departure Datetime", "Status", "Return to main menu")
+    print_menu(items)
     
     field = input(": ")
     flight_id = input("FlightId: ")
@@ -166,19 +165,12 @@ def add_flight(conn):
         print(e)
         conn.rollback()
 
-def print_menu():
+def print_menu(items):
     """helper function print main menu"""
     print("\n")
-    print("[1] Add a New Flight")
-    print("[2] View Flights by Criteria")
-    print("[3] Update Flight Information")
-    print("[4] Assign Pilot to Flight")
-    print("[5] View Pilot Schedule")
-    print("[6] View Destination Information")
-    print("[7] Update Destination Information")
-    print("[8] Delete Destination Information")
-    print("[9] Reports")
-    print("[0] Exit")
+    for i, item in enumerate(items, start=1):
+        print('[', i, '] ', item)
+    print("[ 0 ]  Exit")
 
 def main():
     """connect to the database and call installdb.py libraries to create database schema and populate data"""
@@ -193,7 +185,9 @@ def main():
         """entry point for the application, print main menu and """
         """then called function based on user selection"""
         """return to the main menu until the user exits"""
-        print_menu()
+        items = ("Add a New Flight", "View Flights by Criteria", "Update Flight Information", "Assign Pilot to Flight", "View Pilot Schedule",
+             "View Destination Information", "Update Destination Information", "Delete Destination Information", "Reports")
+        print_menu(items)
         selection = input(": ")
         match selection:
             case '1':

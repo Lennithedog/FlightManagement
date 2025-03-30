@@ -23,7 +23,7 @@ def create_database(conn):
 
 def create_views(conn):
     conn.execute("CREATE VIEW IF NOT EXISTS v_pilot_schedule AS "
-    "SELECT p.FirstName, p.LastName, a.City as Departure, DepartureDatetime as Departing FROM Pilot p "
+    "SELECT p.PilotId as PilotId, p.FirstName, p.LastName, a.City as Departure, DepartureDatetime as Departing FROM Pilot p "
     "INNER JOIN PilotSchedule s on p.PilotId=s.PilotId "
     "LEFT JOIN Flight f on s.FlightId=f.FlightId "
     "LEFT JOIN Airport a on a.AirportId=f.DepartureAirportId")
